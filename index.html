@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Attendance System</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#1f2937}
+header{background:#173b72;color:white;padding:22px;text-align:center}
+header h1{margin:0 0 6px}
+header p{margin:0;opacity:.9}
+.container{max-width:1100px;margin:25px auto;padding:0 16px}
+.card{background:white;border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 3px 12px rgba(0,0,0,.08)}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+label{font-weight:bold;display:block;margin-bottom:6px}
+input,select,button{padding:10px 12px;border:1px solid #ccd5e1;border-radius:7px;font-size:15px}
+button{cursor:pointer;border:0;font-weight:bold}
+.primary{background:#173b72;color:white}
+.secondary{background:#e8eef8;color:#173b72}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{padding:18px;border-radius:10px;background:#eef4ff;text-align:center}
+.stat b{display:block;font-size:25px;margin-top:5px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}
+th{background:#f1f5f9}
+.status button{margin-right:6px}
+.present{background:#198754;color:white}
+.absent{background:#dc3545;color:white}
+.selected{outline:3px solid #173b72}
+.badge{padding:5px 9px;border-radius:15px;font-size:12px;font-weight:bold}
+.good{background:#d1fae5;color:#065f46}
+.low{background:#fee2e2;color:#991b1b}
+#message{margin-top:12px;font-weight:bold}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}table{font-size:13px}.status button{margin-bottom:5px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Student Attendance Management System</h1>
+<p>BCA Exhibition Project</p>
+</header>
+
+<div class="container">
+<div class="card">
+<h2>Mark Attendance</h2>
+<div class="controls">
+<div><label>Date</label><input type="date" id="date"></div>
+<div><label>Subject</label>
+<select id="subject">
+<option>C Programming</option>
+<option>Introduction to Algorithms</option>
+<option>Computer Fundamentals</option>
+<option>Mathematics</option>
+</select></div>
+<button class="primary" onclick="markAll('Present')">Mark All Present</button>
+<button class="secondary" onclick="markAll('Absent')">Mark All Absent</button>
+</div>
+<div id="message"></div>
+</div>
+
+<div class="card">
+<h2>Today's Attendance</h2>
+<table>
+<thead><tr><th>Roll No.</th><th>Student Name</th><th>Status</th></tr></thead>
+<tbody id="attendanceBody"></tbody>
+</table>
+<br>
+<button class="primary" onclick="saveAttendance()">Save Attendance</button>
+</div>
+
+<div class="card">
+<h2>Attendance Report</h2>
+<div class="stats">
+<div class="stat">Students<b id="totalStudents">0</b></div>
+<div class="stat">Present Today<b id="presentCount">0</b></div>
+<div class="stat">Absent Today<b id="absentCount">0</b></div>
+<div class="stat">Average Attendance<b id="average">0%</b></div>
+</div>
+<br>
+<input id="search" placeholder="Search student..." oninput="renderReport()">
+<br><br>
+<table>
+<thead><tr><th>Roll No.</th><th>Student</th><th>Classes</th><th>Present</th><th>Attendance</th></tr></thead>
+<tbody id="reportBody"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+const students=[
+ {roll:1,name:"Rahul Sharma"},{roll:2,name:"Anjali Patil"},
+ {roll:3,name:"Arjun Kumar"},{roll:4,name:"Sneha Joshi"},
+ {roll:5,name:"Rohan Desai"},{roll:6,name:"Priya Shah"},
+ {roll:7,name:"Vivek Rao"},{roll:8,name:"Neha Kulkarni"}
+];
+let attendance=JSON.parse(localStorage.getItem("attendanceData")||"{}");
+let current={};
+
+const dateInput=document.getElementById("date");
+dateInput.value=new Date().toISOString().slice(0,10);
+
+function key(){return dateInput.value+"_"+document.getElementById("subject").value}
+function loadToday(){
+ current=attendance[key()]||{};
+ students.forEach(s=>{if(!current[s.roll]) current[s.roll]="Absent";});
+ renderTable(); updateStats();
+}
+function renderTable(){
+ document.getElementById("attendanceBody").innerHTML=students.map(s=>{
+  const status=current[s.roll]||"Absent";
+  return `<tr><td>${String(s.roll).padStart(2,"0")}</td><td>${s.name}</td>
+  <td class="status">
+  <button class="${status==="Present"?"present selected":"secondary"}" onclick="setStatus(${s.roll},'Present')">Present</button>
+  <button class="${status==="Absent"?"absent selected":"secondary"}" onclick="setStatus(${s.roll},'Absent')">Absent</button>
+  </td></tr>`;
+ }).join("");
+}
+function setStatus(roll,status){current[roll]=status;renderTable();updateStats();}
+function markAll(status){students.forEach(s=>current[s.roll]=status);renderTable();updateStats();}
+function saveAttendance(){
+ attendance[key()]={...current};
+ localStorage.setItem("attendanceData",JSON.stringify(attendance));
+ document.getElementById("message").textContent="✓ Attendance saved successfully!";
+ renderReport();
+ setTimeout(()=>document.getElementById("message").textContent="",2500);
+}
+function updateStats(){
+ let p=Object.values(current).filter(x=>x==="Present").length;
+ document.getElementById("presentCount").textContent=p;
+ document.getElementById("absentCount").textContent=students.length-p;
+ document.getElementById("totalStudents").textContent=students.length;
+}
+function renderReport(){
+ const q=document.getElementById("search").value.toLowerCase();
+ let rows=[],sum=0;
+ students.filter(s=>s.name.toLowerCase().includes(q)||String(s.roll).includes(q)).forEach(s=>{
+  let classes=0,present=0;
+  Object.values(attendance).forEach(day=>{
+   if(day[s.roll]){classes++;if(day[s.roll]==="Present")present++;}
+  });
+  let pct=classes?Math.round(present/classes*100):0;
+  sum+=pct;
+  rows.push(`<tr><td>${String(s.roll).padStart(2,"0")}</td><td>${s.name}</td><td>${classes}</td><td>${present}</td>
+  <td><span class="badge ${pct>=75?"good":"low"}">${pct}% ${pct<75?"⚠ Low":""}</span></td></tr>`);
+ });
+ document.getElementById("reportBody").innerHTML=rows.join("");
+ document.getElementById("average").textContent=(students.length?Math.round(sum/students.length):0)+"%";
+}
+dateInput.addEventListener("change",loadToday);
+document.getElementById("subject").addEventListener("change",loadToday);
+loadToday();renderReport();
+</script>
+</body>
+</html>
